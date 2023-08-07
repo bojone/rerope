@@ -13,8 +13,6 @@ Using ReRoPE, we can more effectively extend the context length of LLM without t
 
 ## Cite
 
-## 引用
-
 ```
 @misc{rerope2023,
   title={Rectified Rotary Position Embeddings},
