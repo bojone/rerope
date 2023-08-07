@@ -29,3 +29,6 @@ From [here](https://github.com/bojone/rerope/commit/2cbd019fcafec5ebe2bd9a2aec13
   howpublished={\url{https://github.com/bojone/rerope}},
 }
 ```
+
+## Communication
+QQ discussion group: 67729435, for WeChat group, please add the robot WeChat ID spaces_ac_cn
