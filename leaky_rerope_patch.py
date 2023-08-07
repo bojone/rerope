@@ -14,27 +14,14 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids):
     sin = sin.squeeze(1).squeeze(0)  # [seq_len, dim]
     cos = cos[position_ids].unsqueeze(1)  # [bs, 1, seq_len, dim]
     sin = sin[position_ids].unsqueeze(1)  # [bs, 1, seq_len, dim]
-    q_embed = (q * cos) + (rotate_half(q) * sin)
-    k_embed = (k * cos) + (rotate_half(k) * sin)
+    q_embed = (q * cos[:, :, -q.shape[2]:]) + (rotate_half(q) * sin[:, :, -q.shape[2]:]) if q is not None else None
+    k_embed = (k * cos) + (rotate_half(k) * sin) if k is not None else None
     return q_embed, k_embed
 
 
 def _init_rope(self):
-    if self.config.rope_scaling is None:
-        self.rotary_emb = LlamaRotaryEmbedding(self.head_dim, max_position_embeddings=self.max_position_embeddings)
-    else:
-        scaling_type = self.config.rope_scaling["type"]
-        scaling_factor = self.config.rope_scaling["factor"]
-        if scaling_type == "linear":
-            self.rotary_emb = LlamaLinearScalingRotaryEmbedding(
-                self.head_dim, max_position_embeddings=self.max_position_embeddings, scaling_factor=scaling_factor
-            )
-        elif scaling_type == "dynamic":
-            self.rotary_emb = LlamaDynamicNTKScalingRotaryEmbedding(
-                self.head_dim, max_position_embeddings=self.max_position_embeddings, scaling_factor=scaling_factor
-            )
-        else:
-            raise ValueError(f"Unknown RoPE scaling type {scaling_type}")
+    self.rotary_emb = LlamaRotaryEmbedding(self.head_dim, max_position_embeddings=self.max_position_embeddings)
+    self.rotary_emb2 = LlamaLinearScalingRotaryEmbedding(self.head_dim, max_position_embeddings=self.max_position_embeddings, scaling_factor=scaling_factor)
 
 
 def forward_with_leaky_rerope(
@@ -71,25 +58,43 @@ def forward_with_leaky_rerope(
     query_states = query_states.view(bsz, q_len, self.num_heads, self.head_dim).transpose(1, 2)
     key_states = key_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose(1, 2)
     value_states = value_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose(1, 2)
+    query_states *= ((position_ids + 1)[:, None, :, None].log() / np.log(training_length)).clip(1).to(query_states.dtype)
 
     kv_seq_len = key_states.shape[-2]
     if past_key_value is not None:
         kv_seq_len += past_key_value[0].shape[-2]
-    cos, sin = self.rotary_emb(value_states, seq_len=kv_seq_len)
-    query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin, position_ids)
-
-    if past_key_value is not None:
         # reuse k, v, self_attention
         key_states = torch.cat([past_key_value[0], key_states], dim=2)
         value_states = torch.cat([past_key_value[1], value_states], dim=2)
+        position_ids = torch.cat([past_key_value[2], position_ids], dim=1)
 
-    past_key_value = (key_states, value_states) if use_cache else None
+    past_key_value = (key_states, value_states, position_ids) if use_cache else None
+    
+    offset = window * (scaling_factor - 1)
+    cos, sin = self.rotary_emb(value_states, seq_len=kv_seq_len)
+    cos2, sin2 = self.rotary_emb2(value_states, seq_len=kv_seq_len + offset)
+    if q_len == 1:
+        position_ids = position_ids[:, -1:] - position_ids
+        cos = torch.cat([cos[:, :, :window], cos2[:, :, window + offset:]], axis=2)
+        sin = torch.cat([sin[:, :, :window], sin2[:, :, window + offset:]], axis=2)
+        _, key_states = apply_rotary_pos_emb(None, key_states, cos, -sin, position_ids)
+        key_states = repeat_kv(key_states, self.num_key_value_groups)
+        value_states = repeat_kv(value_states, self.num_key_value_groups)
+        attn_weights = torch.matmul(query_states, key_states.transpose(2, 3)) / math.sqrt(self.head_dim)
+    else:
+        query_states1, key_states1 = apply_rotary_pos_emb(query_states, key_states, cos, sin, position_ids)
+        query_states2, _ = apply_rotary_pos_emb(query_states, None, cos2, sin2, position_ids + offset)
+        _, key_states2 = apply_rotary_pos_emb(None, key_states, cos2, sin2, position_ids)
 
-    # repeat k/v heads if n_kv_heads < n_heads
-    key_states = repeat_kv(key_states, self.num_key_value_groups)
-    value_states = repeat_kv(value_states, self.num_key_value_groups)
+        # repeat k/v heads if n_kv_heads < n_heads
+        key_states1 = repeat_kv(key_states1, self.num_key_value_groups)
+        key_states2 = repeat_kv(key_states2, self.num_key_value_groups)
+        value_states = repeat_kv(value_states, self.num_key_value_groups)
 
-    attn_weights = torch.matmul(query_states, key_states.transpose(2, 3)) / math.sqrt(self.head_dim)
+        attn_weights1 = torch.matmul(query_states1, key_states1.transpose(2, 3)) / math.sqrt(self.head_dim)
+        attn_weights2 = torch.matmul(query_states2, key_states2.transpose(2, 3)) / math.sqrt(self.head_dim)
+        rectified_mask = (position_ids[:, -q_len:, None] - position_ids[:, None]).abs() < window
+        attn_weights = torch.where(rectified_mask, attn_weights1, attn_weights2)
 
     if attn_weights.size() != (bsz, self.num_heads, q_len, kv_seq_len):
         raise ValueError(
