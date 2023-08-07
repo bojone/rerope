@@ -1,6 +1,6 @@
 #! -*- coding: utf-8 -*-
 # Leaky ReRoPE (Leaky Rectified Rotary Position Embeddings)
-# 链接：https://kexue.fm/archives/8708
+# 链接：https://kexue.fm/archives/9708
 # transformers 4.31.0 测试通过
 
 import torch
