@@ -30,7 +30,7 @@ L = 4096 * 4
 loss = 0
 
 with torch.no_grad():
-    with open('sample_15k.jsonl') as fr:
+    with open('samples_15k.jsonl') as fr:
         for i, l in enumerate(tqdm(fr, ncols=0)):
             text = json.loads(l)['text']
             input_ids = tokenizer([text], return_tensors='pt').to(device).input_ids
