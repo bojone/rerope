@@ -13,16 +13,20 @@ Using ReRoPE, we can more effectively extend the context length of LLM without t
 
 ## Results
 
-- RoPE-4k(original llama2): 1.4967308044433594
-- RoPE-8k(original llama2): 8.861469268798828
+Calculated the loss on llama2-13b with `samples_15k.jsonl`:
 
-- NTK-RoPE-4k(not dynamic): 1.608105926513672
-- NTK-RoPE-8k(not dynamic): 1.5417398071289063
-- NTK-RoPE-16k(not dynamic): 1.5162832641601562
-
-- ReRoPE-w1024-4k: 1.4995654296875
-- ReRoPE-w1024-8k: 1.42667236328125
-- ReRoPE-w1024-16k: 1.4001029095246424
+| Method | loss |
+| ------ | ---- |
+| RoPE-4k(original llama2-13b) | 1.4967308044433594 |
+| RoPE-8k(original llama2-13b) |  8.861469268798828 |
+| ------ | ---- |
+| NTK-RoPE-4k(not dynamic) | 1.608105926513672 |
+| NTK-RoPE-8k(not dynamic) | 1.5417398071289063 |
+| NTK-RoPE-16k(not dynamic) | 1.5162832641601562 |
+| ------ | ---- |
+| ReRoPE-w1024-4k | 1.4995654296875 |
+| ReRoPE-w1024-8k | 1.42667236328125 |
+| ReRoPE-w1024-16k | 1.4001029095246424 |
 
 ReRoPE's performance at training length (4k) has hardly decreased, and it possesses the ideal property of "longer context, lower loss".
 
