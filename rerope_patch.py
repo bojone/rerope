@@ -73,7 +73,7 @@ def forward_with_rerope(
         value_states = repeat_kv(value_states, self.num_key_value_groups)
         attn_weights = torch.matmul(query_states, key_states.transpose(2, 3)) / math.sqrt(self.head_dim)
     else:
-        cos, sin = self.rotary_emb(value_states, seq_len=max(kv_seq_len, window))
+        cos, sin = self.rotary_emb(value_states, seq_len=max(kv_seq_len, window + 1))
         query_states1, key_states1 = apply_rotary_pos_emb(query_states, key_states, cos, sin, position_ids)
         query_states2, _ = apply_rotary_pos_emb(query_states, None, cos, sin, position_ids * 0 + window)
 
