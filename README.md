@@ -4,8 +4,10 @@ Using ReRoPE, we can more effectively extend the context length of LLM without t
 
 ## Blog
 
-- https://kexue.fm/archives/9706
-- https://kexue.fm/archives/9708
+- https://kexue.fm/archives/9706 (Chinese)
+- https://kexue.fm/archives/9708 (Chinese)
+- https://normxu.github.io/Rethinking-Rotary-Position-Embedding-2/ (English by [@NormXU](https://github.com/NormXU))
+- https://normxu.github.io/Rethinking-Rotary-Position-Embedding-3/ (English by [@NormXU](https://github.com/NormXU))
 
 ## Idea
 
