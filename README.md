@@ -38,6 +38,10 @@ Run `python test.py` to test chatting or run `python eval_loss.py` to calculate 
 
 From [here](https://github.com/bojone/rerope/commit/2cbd019fcafec5ebe2bd9a2aec139c13ee8a67ae#diff-95a34212b33ed7212a3e43a00a8c7461378b45c35cce0e093d7f6ff068263670) and [here](https://github.com/bojone/rerope/commit/2cbd019fcafec5ebe2bd9a2aec139c13ee8a67ae#diff-f2d0565fa79ad02ed55bcaaea148d153d231641920488e51ae6b51f3e30cb464), we can see what modifications ReRoPE/Leaky ReRoPE has made compared to the original llama implementation.
 
+## Other
+
+Triton Implementation of ReRoPE: https://gist.github.com/chu-tianxiang/4307937fd94b49c75b61a6967716bae9
+
 ## Cite
 
 ```
