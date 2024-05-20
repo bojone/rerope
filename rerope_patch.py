@@ -67,7 +67,7 @@ def forward_with_rerope(
     
     if q_len == 1:
         cos, sin = self.rotary_emb(value_states, seq_len=kv_seq_len)
-        position_ids = (position_ids[:, -1] - position_ids).clip(max=window)
+        position_ids = (position_ids[:, -1:] - position_ids).clip(max=window)
         _, key_states = apply_rotary_pos_emb(None, key_states, cos, -sin, position_ids)
         key_states = repeat_kv(key_states, self.num_key_value_groups)
         value_states = repeat_kv(value_states, self.num_key_value_groups)
